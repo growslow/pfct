@@ -97,4 +97,4 @@ if (error) throw error;
 
 ## 尚未开放的后端能力
 
-当前没有触发 AI 分析、调用 FatSecret、汇总全天、研究导出或删除账户的接口。下一步通过可信服务实现，所需密钥仅存服务端。前端可以先完成登录、拍照、猜测和记录列表的联调。
+手动 FatSecret 参考接口已在 `food-reference` Edge Function 中提供，需要部署、配置凭证和 IP 白名单；具体见 `manual-food-confirmation.md`。当前没有照片 AI 识别、汇总全天、研究导出或删除账户的接口。所需密钥仅存服务端。

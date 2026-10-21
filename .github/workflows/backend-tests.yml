@@ -22,6 +22,14 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Install Node for calculation and function tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test portion calculations and authenticated reference handler
+        run: node --test tests/*.test.mjs
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -36,9 +44,10 @@ jobs:
 
       - name: Test participant isolation and write permissions
         run: |
-          docker exec -i supabase_db_pfct-nutrition \
-            psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
-            < supabase/tests/access.sql
+          for test_file in supabase/tests/*.sql; do
+            docker exec -i supabase_db_pfct-nutrition \
+              psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$test_file"
+          done
 
       - name: Show database logs on failure
         if: failure()

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="PFCT 营养直觉学习实验：记录餐食，猜测营养，理解自己的每一餐。">
+  <title>PFCT · 每一餐，多一点了解</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">pfct<span>✳</span></a>
+    <nav aria-label="主导航"><a class="active" href="#meal">记录一餐</a><a href="#history">我的记录</a></nav>
+    <button class="quiet" id="settings-button" aria-expanded="false" aria-controls="settings">连接设置 <span aria-hidden="true">↗</span></button>
+  </header>
+  <main>
+    <section id="settings" class="settings" hidden>
+      <div><span class="eyebrow">DEVELOPMENT CONNECTION</span><h2>连接你的测试后端</h2><p>演示模式仅在本页内存中保存记录，刷新即清空。真实模式需要先应用数据库迁移；不会自动创建云端数据表。</p></div>
+      <form id="connect-form">
+        <label>运行模式<select id="mode"><option value="demo">本地演示 · 不上传数据</option><option value="live">Supabase · 真实联调</option></select></label>
+        <label>Supabase 项目地址<input id="project-url" type="url" placeholder="https://your-project.supabase.co" autocomplete="off"></label>
+        <label>Publishable key / anon key<input id="project-key" type="password" placeholder="仅填写公开密钥，禁止使用 secret / service_role" autocomplete="off"></label>
+        <button class="primary" type="submit">应用连接</button>
+      </form>
+      <form id="auth-form" hidden>
+        <h3>登录测试账户</h3>
+        <label>邮箱<input id="email" type="email" autocomplete="username" required></label>
+        <label>密码<input id="password" type="password" autocomplete="current-password" minlength="6" required></label>
+        <div class="button-row"><button class="primary" type="submit">登录</button><button type="button" class="quiet" id="signup">注册账户</button></div>
+        <p class="small">注册后可能需要先验证邮箱。这里只用于开发测试，研究同意流程尚未开放。</p>
+      </form>
+      <div id="account" hidden><p id="account-text"></p><button id="logout" class="quiet">退出登录</button></div>
+    </section>
+
+    <div class="mode-line"><span class="status-dot"></span><span id="mode-label">本地演示 · 数据不上传，刷新即清空</span><span class="pill">EARLY PREVIEW</span></div>
+    <section class="intro"><div><span class="eyebrow">A LITTLE GUESS. A LITTLE DISCOVERY.</span><h1>每一餐，<br>多一点<span class="accent">了解。</span></h1><p>先凭直觉猜一猜，再慢慢认识食物。<br>没有饮食评分，只有关于自己的一点新发现。</p></div><div class="intro-note"><span class="sun" aria-hidden="true">✳</span><p>不必一开始就猜对。<br><strong>理解，比记住数字更有趣。</strong></p></div></section>
+
+    <div class="workspace" id="meal">
+      <section class="card meal-card">
+        <div class="card-heading"><div><span class="eyebrow">01 / YOUR PLATE</span><h2>今天，吃了什么？</h2></div><span class="number-mark" aria-hidden="true">01</span></div>
+        <label class="upload-area" id="upload-area" for="photo">
+          <img id="preview" alt="所选餐食照片预览" hidden>
+          <span id="upload-hint"><span class="plate" aria-hidden="true"><span>＋</span></span><strong>放下一张餐食照片</strong><span>点击选择，或把照片拖到这里</span><small>JPG / PNG / WebP · 最大 10 MB</small></span>
+          <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" aria-label="选择餐食照片">
+        </label>
+        <p id="file-name" class="small">让这一餐，成为你的学习素材。</p>
+        <div class="meal-meta"><label>这是哪一餐？<select id="meal-type"><option value="breakfast">早餐</option><option value="lunch" selected>午餐</option><option value="dinner">晚餐</option><option value="snack">加餐</option><option value="other">其他</option></select></label><label>用餐时间<input id="eaten-at" type="datetime-local" required></label></div>
+      </section>
+
+      <section class="card guess-card">
+        <div class="card-heading"><div><span class="eyebrow">02 / TRUST YOUR INTUITION</span><h2>你的营养直觉是？</h2></div><span class="number-mark" aria-hidden="true">02</span></div>
+        <p class="subtle">估一估整餐的营养。暂时不知道也没关系。</p>
+        <form id="guess-form">
+          <div class="nutrient-grid">
+            <label class="nutrient protein"><span class="nutrient-title"><b>P</b> 蛋白质</span><span class="value-wrap"><input id="protein" type="number" min="0" max="10000" step="0.01" placeholder="0" required aria-label="蛋白质克数"><span>g</span></span><small>PROTEIN</small></label>
+            <label class="nutrient fat"><span class="nutrient-title"><b>F</b> 脂肪</span><span class="value-wrap"><input id="fat" type="number" min="0" max="10000" step="0.01" placeholder="0" required aria-label="脂肪克数"><span>g</span></span><small>FAT</small></label>
+            <label class="nutrient carbs"><span class="nutrient-title"><b>C</b> 碳水</span><span class="value-wrap"><input id="carbs" type="number" min="0" max="10000" step="0.01" placeholder="0" required aria-label="碳水克数"><span>g</span></span><small>CARBOHYDRATES</small></label>
+            <label class="nutrient calories"><span class="nutrient-title"><b>T</b> 总热量</span><span class="value-wrap"><input id="calories" type="number" min="0" max="100000" step="0.01" placeholder="0" required aria-label="总热量千卡"><span>kcal</span></span><small>TOTAL CALORIES</small></label>
+          </div>
+          <p class="hint">✧ 先保留你的第一感觉，不用查答案。</p>
+          <button class="primary submit" id="submit-guess" type="submit">保存我的猜测 <span aria-hidden="true">↗</span></button>
+          <button class="quiet reset" type="button" id="new-meal">开始新的一餐</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="card confirmation" id="confirmation" hidden aria-labelledby="confirmation-title">
+      <div class="card-heading"><div><span class="eyebrow">03 / KNOW YOUR PORTIONS</span><h2 id="confirmation-title">确认食物，揭晓这一餐。</h2></div><span class="number-mark" aria-hidden="true">03</span></div>
+      <p class="subtle" id="confirmation-context"></p>
+      <p class="small">请包括食材、烹饪用油、酱料和饮料。生重与熟重请选择对应食物条目；克和毫升不直接互换。</p>
+      <div id="live-food-picker" hidden>
+        <form id="food-search-form" class="search-row"><label>搜索食物<input id="food-query" required minlength="2" maxlength="100" placeholder="例如 cooked rice / chicken breast"></label><button class="primary" type="submit">搜索 FatSecret</button></form>
+        <p class="small">当前使用 Basic 接口默认数据集；中文和地区筛选取决于套餐权限。优先尝试英文名称。</p>
+        <div id="food-results" class="food-results" aria-live="polite"></div>
+        <form id="portion-form" hidden>
+          <h3 id="selected-food-name"></h3>
+          <div class="portion-grid"><label>标准份<select id="serving-choice"></select></label><label>食用数量<input id="portion-quantity" type="number" min="0.01" max="10000" step="0.01" value="1" required></label><label>计算单位<select id="portion-measure"></select></label></div>
+          <button class="quiet" type="submit">＋ 加入这一餐</button>
+        </form>
+        <a class="provider" href="https://www.fatsecret.com" target="_blank" rel="noopener noreferrer">Powered by fatsecret</a>
+      </div>
+      <form id="label-form">
+        <p class="label-note">本地模式：根据你填写的包装营养标签计算，不是 FatSecret 查询结果。没有标签时，请连接后端搜索食物，不要把猜测再填成参考答案。</p>
+        <div class="portion-grid"><label>食物名称<input id="label-name" maxlength="100" required placeholder="包装上的食物名称"></label><label>标签基准重量（g）<input id="label-base" type="number" min="0.01" max="10000" step="0.01" value="100" required></label><label>实际食用重量（g）<input id="label-amount" type="number" min="0.01" max="10000" step="0.01" required placeholder="例如 150"></label></div>
+        <div class="label-nutrients"><label>基准份蛋白质（g）<input id="label-protein" type="number" min="0" max="10000" step="0.01" required></label><label>基准份脂肪（g）<input id="label-fat" type="number" min="0" max="10000" step="0.01" required></label><label>基准份碳水（g）<input id="label-carbs" type="number" min="0" max="10000" step="0.01" required></label><label>基准份热量（kcal）<input id="label-calories" type="number" min="0" max="100000" step="0.01" required></label></div>
+        <p class="small">如果标签使用 kJ，请先除以 4.184 转为 kcal。所有营养数值必须对应上面同一基准重量。</p>
+        <button class="quiet" type="submit">＋ 加入这一餐</button>
+      </form>
+      <div id="confirmed-items" class="confirmed-items" aria-live="polite"></div>
+      <div class="button-row"><button class="primary" id="confirm-portions" type="button">确认份量并对比猜测 ↗</button><button class="quiet" id="review-reference" hidden type="button">重新查询上次确认</button></div>
+      <p class="small" id="reference-storage-note"></p>
+      <p id="food-status" class="notice" role="status" aria-live="polite">先加入食物和实际食用份量。</p>
+    </section>
+    <section class="result card" id="result" hidden aria-labelledby="result-title"><div><span class="eyebrow">04 / A MOMENT OF DISCOVERY</span><h2 id="result-title">猜测已记录，等一次新发现。</h2><p id="result-description"></p></div><div id="comparison"></div></section>
+    <p id="notice" class="notice" role="status" aria-live="polite">准备好了，就从一张照片开始。</p>
+
+    <section class="history" id="history"><div class="section-heading"><div><span class="eyebrow">YOUR FOOD JOURNAL</span><h2>每一餐，都是线索。</h2></div><button class="quiet" id="refresh">刷新记录 ↻</button></div><div id="records" class="records"><div class="empty"><span aria-hidden="true">↗</span><p>这里还没有餐食记录。<br><small>记录第一餐，开始认识自己的营养直觉。</small></p></div></div></section>
+    <footer><a class="brand" href="#">pfct<span>✳</span></a><p>从猜测开始，让理解留下来。</p><span>营养认知学习 · 开发预览版</span></footer>
+  </main>
+</body>
+</html>
