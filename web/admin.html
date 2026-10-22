@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>研究管理台 · PFCT</title><link rel="stylesheet" href="style.css"><script type="module" src="admin.js"></script></head>
+<body class="admin-body"><div class="admin-shell">
+  <aside class="admin-sidebar"><a class="brand" href="login.html">pfct<span>✳</span></a><span class="eyebrow">RESEARCH WORKSPACE</span><a class="sidebar-active" href="#participants">◫ 用户与记录</a><a href="index.html">↗ 用户页面</a><div class="sidebar-note"><strong>保留过程，理解变化。</strong><p>原始数据只读展示。<br>每次猜测都有自己的位置。</p></div><button class="quiet" id="admin-logout">退出管理台</button></aside>
+  <main class="admin-main" id="admin-main"><header class="admin-heading"><div><span class="eyebrow">PFCT / RESEARCH CONSOLE</span><h1>每一次猜测，<span class="accent">都有迹可循。</span></h1><p class="subtle">从用户到单餐，查看营养认知学习的原始记录。</p></div><span class="pill" id="admin-mode">正在验证权限</span></header>
+    <p class="notice" id="admin-notice" role="status" aria-live="polite">正在验证管理员身份…</p>
+    <section class="admin-stats" aria-label="数据总览"><article><span>参与者</span><strong id="stat-participants">—</strong><small>独立研究 ID</small></article><article><span>餐食记录</span><strong id="stat-meals">—</strong><small>按提交记录统计</small></article><article><span>PFCT 猜测</span><strong id="stat-guesses">—</strong><small>包含所有尝试</small></article><article><span>份量确认</span><strong id="stat-confirmations">—</strong><small>包含历史版本</small></article></section>
+    <div class="admin-grid"><section class="card participant-card" id="participants"><div class="section-heading"><div><span class="eyebrow">PARTICIPANTS</span><h2>用户与研究记录</h2></div><button class="quiet" id="admin-refresh">刷新 ↻</button></div>
+      <form id="admin-filter" class="admin-filter"><label>参与者 ID<input id="participant-query" maxlength="100" placeholder="搜索研究 ID"></label><label>记录状态<select id="participant-filter"><option value="all">全部用户</option><option value="with_records">有餐食记录</option><option value="without_records">尚无餐食记录</option></select></label><button class="primary" type="submit">筛选</button></form>
+      <div class="table-scroll"><table class="participant-table"><thead><tr><th scope="col">参与者</th><th scope="col">餐食 / 猜测</th><th scope="col">最近提交</th><th scope="col">研究同意</th><th scope="col">查看</th></tr></thead><tbody id="participant-rows"></tbody></table></div>
+      <div class="pagination"><span id="participant-page">—</span><div><button id="participants-prev" class="quiet">上一页</button><button id="participants-next" class="quiet">下一页</button></div></div>
+    </section>
+    <aside class="card detail-card" id="participant-detail" aria-label="用户记录详情"><span class="eyebrow">FOLLOW THE RECORD</span><h2>从一位用户开始。</h2><p class="subtle">选择左侧用户，查看餐食、原始猜测与份量确认的时间线。</p><div class="detail-placeholder" aria-hidden="true">↗</div><p class="small">不根据热量高低给用户打分，也不自动改写研究记录。</p></aside></div>
+    <p class="small admin-footnote">统计用于查看记录完整性，不代表饮食健康评价。FatSecret 历史确认仅保留食物 ID 与份量输入，缺失的营养快照不会被补成零。</p>
+  </main>
+</div></body></html>

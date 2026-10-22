@@ -9,7 +9,7 @@ python3 scripts/build-preview.py
 python3 -m http.server 8080 --bind 127.0.0.1 --directory web
 ```
 
-打开 http://127.0.0.1:8080 ，保存猜测后，在“确认食物”填写实际包装标签、基准重量和食用重量，可添加多项后计算。这里的参考来源明确标为用户填写标签，不是 FatSecret；所有数据仅在内存中。标签热量若是 kJ，先除以 4.184 转为 kcal。不要把自己的营养猜测再用作标签参考值。
+打开 http://127.0.0.1:8080/login.html 并选择“体验用户演示”。保存猜测后，在“确认食物”填写实际包装标签、基准重量和食用重量，可添加多项后计算。这里的参考来源明确标为用户填写标签，不是 FatSecret；餐食数据仅在内存中。标签热量若是 kJ，先除以 4.184 转为 kcal。不要把自己的营养猜测再用作标签参考值。
 
 ## 接通真实 FatSecret
 
@@ -32,7 +32,7 @@ supabase functions deploy food-reference
 
 本地 Edge 开发可运行 `supabase functions serve food-reference --env-file supabase/functions/.env`，需要 Docker 和本地 Supabase 已启动。云端 Edge Function 的实际出口 IP 是否符合你的 FatSecret 白名单必须实测；不符合时需要固定出口的服务端代理，当前不伪装或绕过该限制。
 
-HTML 的“连接设置”选择 Supabase、填写公开密钥和项目地址，登录后保存猜测，再搜索英文食物名称、选择标准份和实际数量。`servings` 指完整标准份的倍数：选择“2 tablespoons”后输入 2，表示共 4 tablespoons。只有返回同一 metric unit 且基准量大于零时才允许 g/ml 换算。
+在独立登录页展开“开发环境连接”、填写公开密钥和项目地址，登录后保存猜测，再搜索英文食物名称、选择标准份和实际数量。`servings` 指完整标准份的倍数：选择“2 tablespoons”后输入 2，表示共 4 tablespoons。只有返回同一 metric unit 且基准量大于零时才允许 g/ml 换算。
 
 ## 服务端与数据流
 

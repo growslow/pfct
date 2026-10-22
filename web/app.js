@@ -1,8 +1,9 @@
 'use strict';
 import { scaleServing, totalNutrition, compareNutrition, nutrientKeys } from './nutrition.mjs';
+import { readConnection, writeConnection, clearConnection, signOut } from './auth.mjs';
 
 // Buildless preview. Only a publishable/legacy anon key may be used here.
-// Auth tokens and configuration remain in memory and are cleared on refresh.
+// Real login survives navigation in tab-scoped sessionStorage; meal drafts remain in memory.
 const $ = (id) => document.getElementById(id);
 const state = { mode: 'demo', url: '', key: '', session: null, participant: null,
   file: null, preview: null, attempt: null, records: [], busy: false,
@@ -54,6 +55,7 @@ function sessionFrom(data) {
   if (!data.access_token) throw new Error('登录没有返回有效会话，请重新登录。');
   state.session = { access: data.access_token, refresh: data.refresh_token,
     expires: Date.now() + (data.expires_in || 3600) * 1000, email: data.user?.email || '' };
+  writeConnection({mode:'live',portal:'user',url:state.url,key:state.key,session:state.session});
 }
 async function decodeResponse(response) {
   const text = await response.text();
@@ -62,7 +64,7 @@ async function decodeResponse(response) {
   return data;
 }
 async function ensureSession() {
-  if (!state.session) throw new Error('请先在连接设置中登录测试账户。');
+  if (!state.session) throw new Error('请先在独立登录页登录测试账户。');
   if (state.session.expires > Date.now() + 60000) return;
   const response = await fetch(`${state.url}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST', headers: { apikey: state.key, 'Content-Type': 'application/json' },
@@ -88,8 +90,7 @@ async function loadParticipant() {
   const rows = await api('/rest/v1/participants?select=id&limit=1');
   if (!rows?.length) throw new Error('账户已登录，但没有参与者记录。请检查是否已应用数据库迁移。');
   state.participant = rows[0].id;
-  $('auth-form').hidden = true; $('account').hidden = false;
-  $('account-text').textContent = `已登录：${state.session.email}`;
+  $('logout').textContent = '退出登录';
   $('mode-label').textContent = 'Supabase 联调 · 已登录，提交将保存到云端';
 }
 async function signedPhoto(path) {
@@ -166,7 +167,7 @@ function showResult(row) {
 }
 async function saveGuess() {
   if (state.attempt?.done) return notice('这一餐已保存。可以开始新的一餐，或刷新记录。', 'success');
-  if (state.mode === 'live' && !state.participant) throw new Error('请先打开连接设置，登录测试账户。');
+  if (state.mode === 'live' && !state.participant) throw new Error('请先在独立登录页登录测试账户。');
   if (!state.attempt) {
     if (!state.file) throw new Error('请先选择一张餐食照片。');
     const date = new Date($('eaten-at').value);
@@ -368,7 +369,6 @@ $('review-reference').addEventListener('click', () => run(async () => {
   row.transientReference = data; renderReference(data, guess); foodStatus('已重新计算。当前值可能与过去不同。', 'success');
 }));
 
-$('settings-button').addEventListener('click', () => { $('settings').hidden = !$('settings').hidden; $('settings-button').setAttribute('aria-expanded', String(!$('settings').hidden)); });
 $('photo').addEventListener('change', (e) => pickFile(e.target.files[0]));
 ['dragenter', 'dragover'].forEach((type) => $('upload-area').addEventListener(type, (e) => { e.preventDefault(); $('upload-area').classList.add('dragging'); }));
 ['dragleave', 'drop'].forEach((type) => $('upload-area').addEventListener(type, (e) => { e.preventDefault(); $('upload-area').classList.remove('dragging'); }));
@@ -379,44 +379,22 @@ $('new-meal').addEventListener('click', () => {
   resetMeal(); notice('新的一餐，新的发现。');
 });
 $('refresh').addEventListener('click', () => run(async () => { await refreshRecords(); notice('记录已刷新（最多显示最近 20 餐）。', 'success'); }));
-$('connect-form').addEventListener('submit', (e) => {
-  e.preventDefault(); run(async () => {
-    const mode = $('mode').value; const key = $('project-key').value.trim(); let url = '';
-    if (mode === 'live') {
-      const parsed = new URL($('project-url').value.trim());
-      if (!(parsed.protocol === 'https:' || (parsed.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(parsed.hostname))) || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/') throw new Error('请填写有效的 Supabase 项目根地址（HTTPS，或本机 HTTP）。');
-      url = parsed.origin;
-      if (!key) throw new Error('请填写 publishable key 或 legacy anon key。');
-      let anon = false;
-      if (key.split('.').length === 3) {
-        try { let part = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); part = part.padEnd(Math.ceil(part.length / 4) * 4, '='); anon = JSON.parse(atob(part)).role === 'anon'; } catch { /* reject malformed keys */ }
-      }
-      if (!key.startsWith('sb_publishable_') && !anon) throw new Error('只能使用 publishable / anon key。不能把 secret 或 service_role 密钥放在网页中。');
-    }
-    if ((state.records.length || state.attempt) && !confirm('切换连接会清空当前页面的演示记录与未完成操作。云端已有记录不会删除。是否继续？')) return;
-    state.records.forEach((row) => { if (row.localImage) URL.revokeObjectURL(row.localImage); });
-    state.mode = mode; state.url = url; state.key = mode === 'live' ? key : ''; state.session = null; state.participant = null; state.records = []; state.drafts.clear();
-    $('auth-form').hidden = mode !== 'live'; $('account').hidden = true; $('password').value = '';
-    $('mode-label').textContent = mode === 'demo' ? '本地演示 · 数据不上传，刷新即清空' : 'Supabase 联调 · 请先登录';
-    resetMeal(); await renderRecords(); notice(mode === 'demo' ? '已切换到本地演示。' : '连接配置已应用。请登录测试账户；密钥和会话仅保留在本页内存。');
-  });
-});
-$('auth-form').addEventListener('submit', (e) => { e.preventDefault(); run(async () => {
-  const data = await api('/auth/v1/token?grant_type=password', { method: 'POST', auth: false, body: { email: $('email').value.trim(), password: $('password').value } });
-  sessionFrom(data); $('password').value = ''; await loadParticipant(); await refreshRecords(); notice('登录成功，可以记录餐食了。', 'success');
-}); });
-$('signup').addEventListener('click', () => {
-  if (!$('auth-form').reportValidity()) return;
-  run(async () => {
-    const data = await api('/auth/v1/signup', { method: 'POST', auth: false, body: { email: $('email').value.trim(), password: $('password').value } });
-    $('password').value = '';
-    if (data?.access_token) { sessionFrom(data); await loadParticipant(); await refreshRecords(); notice('测试账户注册成功。', 'success'); }
-    else notice('注册请求已提交。请检查邮箱，完成验证后返回此页登录。若已注册，可直接登录。', 'success');
-  });
-});
 $('logout').addEventListener('click', () => run(async () => {
-  await api('/auth/v1/logout', { method: 'POST' });
-  state.session = null; state.participant = null; state.records = []; state.drafts.clear(); resetMeal(); await renderRecords();
-  $('auth-form').hidden = false; $('account').hidden = true; $('mode-label').textContent = 'Supabase 联调 · 请先登录'; notice('已退出登录。');
+  try { await signOut(readConnection()); }
+  finally { clearConnection(); location.href = 'login.html'; }
 }));
 resetMeal();
+async function boot() {
+  const connection = readConnection();
+  if (!connection) { location.replace('login.html'); return; }
+  if (connection.mode === 'demo') {
+    $('mode-label').textContent = '本地演示 · 数据不上传，餐食记录刷新即清空';
+    $('logout').textContent = '退出演示';
+    return;
+  }
+  state.mode = 'live'; state.url = connection.url; state.key = connection.key; state.session = connection.session;
+  $('mode-label').textContent = '正在恢复登录会话…';
+  if (!state.session) { clearConnection(); location.replace('login.html?expired=1'); return; }
+  await run(async () => { await loadParticipant(); await refreshRecords(); notice('登录已恢复，可以记录餐食。','success'); });
+}
+boot().catch(error => notice(error.message,'error'));
