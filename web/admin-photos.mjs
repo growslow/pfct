@@ -12,7 +12,12 @@ export async function downloadAdminPhoto(connection,photo,{request=fetch,authori
   const path=adminPhotoPath(photo);
   if(await authorize()!==true) throw new Error('管理员权限已失效，请重新登录。');
   // The Storage SELECT policy independently checks current membership as well.
-  const response=await request(connection.url+path,{headers:{apikey:connection.key,Authorization:`Bearer ${connection.session.access}`},cache:'no-store',signal:AbortSignal.timeout(15000)});
+  let response;
+  try {
+    response=await request(connection.url+path,{headers:{apikey:connection.key,Authorization:`Bearer ${connection.session.access}`},cache:'no-store',signal:AbortSignal.timeout(45000)});
+  } catch(error) {
+    throw new Error(['TimeoutError','AbortError'].includes(error?.name)?'照片下载超时，请点击重试。':'照片暂时无法下载，请检查网络后重试。');
+  }
   if(!response.ok) throw new Error(response.status===403 || response.status===401?'没有权限读取照片，请确认管理员授权。':'照片暂时无法读取，请检查文件是否存在后重试。');
   const blob=await response.blob();
   if(!blob.type.startsWith('image/')) throw new Error('文件不是可预览的图片格式。');

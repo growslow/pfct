@@ -22,3 +22,6 @@ test('missing files and non-images never become a preview URL',async()=>{
  await assert.rejects(downloadAdminPhoto(connection,photo,{...dependencies,request:async()=>new Response('text',{headers:{'Content-Type':'text/plain'}})}),/图片格式/);
  assert.equal(created,0);
 });
+test('slow or failed downloads show a retry message without raw network errors',async()=>{
+ await assert.rejects(downloadAdminPhoto(connection,photo,{authorize:async()=>true,request:async()=>{throw new DOMException('signal timed out','TimeoutError');}}),/照片下载超时/);
+});

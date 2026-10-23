@@ -1,6 +1,7 @@
 """Copy the shared browser module and create a dependency-free HTML deliverable."""
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
+import re
 
 root = Path(__file__).resolve().parents[1]
 web = root / 'web'
@@ -15,8 +16,8 @@ for page, script in [('index','app'),('login','login'),('admin','admin')]:
     if page == 'admin':
         modules += '\n' + '\n'.join(line for line in (web / 'admin-photos.mjs').read_text().splitlines() if not line.startswith('import '))
     inline = '\n'.join(line.removeprefix('export ') for line in modules.splitlines()) + '\n' + js
-    html = html.replace('<link rel="stylesheet" href="style.css">', '<style>\n' + (web / 'style.css').read_text() + '\n</style>')
-    html = html.replace(f'<script type="module" src="{script}.js"></script>', '')
+    html = re.sub(r'<link rel="stylesheet" href="style\.css(?:\?[^\"]*)?">', lambda _: '<style>\n' + (web / 'style.css').read_text() + '\n</style>', html)
+    html = re.sub(r'<script type="module" src="' + re.escape(script) + r'\.js(?:\?[^\"]*)?"></script>', '', html)
     html = html.replace('</body>', '<script type="module">\n' + inline.replace('</script', '<\\/script') + '\n</script>\n</body>')
     (root / 'outputs' / (page + '.html')).write_text(html)
 (root / 'outputs/pfct.html').write_text((root / 'outputs/login.html').read_text())

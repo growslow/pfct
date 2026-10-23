@@ -1,5 +1,5 @@
 import {readConnection,backend,signOut,clearConnection} from './auth.mjs';
-import {downloadAdminPhoto,demoMealPhoto} from './admin-photos.mjs';
+import {downloadAdminPhoto,demoMealPhoto} from './admin-photos.mjs?v=20261023-photos2';
 const $=id=>document.getElementById(id);const connection=readConnection();const pageSize=20;
 let offset=0,total=0,busy=false,selected=null,mealOffset=0,mealTotal=0;
 const photoUrls=new Set();let photoGeneration=0;
@@ -41,7 +41,7 @@ function photoPanel(meal){
    if(generation!==photoGeneration || !panel.isConnected)return;
    for(const photo of data.photos){
      const tile=el('div','photo-tile');const caption=`${mealNames[meal.meal_type]||'餐食'} · ${date(meal.eaten_at)}${photo.demo?' · 演示插图（非上传照片）':''}`;
-     const zoom=el('button','photo-thumbnail');zoom.type='button';zoom.setAttribute('aria-label',`放大查看${caption}`);
+     const zoom=el('button','photo-thumbnail');zoom.type='button';zoom.disabled=true;zoom.dataset.unavailable='true';zoom.setAttribute('aria-label',`放大查看${caption}`);
      const image=el('img');image.alt=caption;image.decoding='async';zoom.append(image);
      const note=el('p','small',photo.demo?'演示插图':'照片加载中…');tile.append(zoom,note);gallery.append(tile);
      async function loadImage(){
