@@ -1,12 +1,14 @@
 import {readConnection,backend,signOut,clearConnection} from './auth.mjs';
+import {downloadAdminPhoto,demoMealPhoto} from './admin-photos.mjs';
 const $=id=>document.getElementById(id);const connection=readConnection();const pageSize=20;
 let offset=0,total=0,busy=false,selected=null,mealOffset=0,mealTotal=0;
+const photoUrls=new Set();let photoGeneration=0;
 const mealNames={breakfast:'早餐',lunch:'午餐',dinner:'晚餐',snack:'加餐',other:'其他'};
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const date=value=>value?new Date(value).toLocaleString('zh-CN'):'暂无记录';
 const consent=value=>value==='granted'?'已记录同意':value==='withdrawn'?'已记录撤回':'未记录';
 function notice(text,error=false){$('admin-notice').textContent=text;$('admin-notice').className=`notice ${error?'error':''}`;}
-function controls(){document.querySelectorAll('button,input,select').forEach(n=>n.disabled=busy);const pp=$('participants-prev'),pn=$('participants-next');if(pp)pp.disabled=busy||offset===0;if(pn)pn.disabled=busy||offset+pageSize>=total;const prev=$('meals-prev'),next=$('meals-next');if(prev)prev.disabled=busy||mealOffset===0;if(next)next.disabled=busy||mealOffset+pageSize>=mealTotal;}
+function controls(){document.querySelectorAll('button,input,select').forEach(n=>n.disabled=busy||n.dataset.unavailable==='true');const pp=$('participants-prev'),pn=$('participants-next');if(pp)pp.disabled=busy||offset===0;if(pn)pn.disabled=busy||offset+pageSize>=total;const prev=$('meals-prev'),next=$('meals-next');if(prev)prev.disabled=busy||mealOffset===0;if(next)next.disabled=busy||mealOffset+pageSize>=mealTotal;}
 async function action(fn){if(busy)return;busy=true;controls();try{await fn();}catch(e){notice(e.message,true);}finally{busy=false;controls();}}
 function blocked(text){$('admin-main').replaceChildren(el('h1','', '暂时无法进入管理台。'),el('p','subtle',text));const a=el('a','primary','返回登录');a.href='login.html?portal=admin';$('admin-main').append(a);}
 const demoParticipants=[0,1,2,3].map((n)=>({id:`demo-participant-${String(n+1).padStart(3,'0')}`,created_at:`2026-10-${15+n}T02:00:00Z`,account_linked:true,meal_count:n===3?0:1,guess_count:n===3?0:n===0?2:1,confirmation_count:n===0?1:0,latest_submission:n===3?null:`2026-10-${19+n}T04:00:00Z`,consent_action:n===0?'granted':n===2?'withdrawn':null}));
@@ -22,12 +24,54 @@ async function list(){const query=$('participant-query').value.trim();const filt
  $('participant-page').textContent=total?`${offset+1}–${Math.min(offset+pageSize,total)} / ${total} 位`:'0 位用户';controls();
 }
 function jsonBlock(title,value){const d=el('details','raw-details');d.append(el('summary','',title),el('pre','',JSON.stringify(value,null,2)));return d;}
+function closePhoto(){if($('photo-dialog').open)$('photo-dialog').close();$('photo-dialog-image').removeAttribute('src');}
+function releasePhotos(){photoGeneration++;closePhoto();for(const url of photoUrls)URL.revokeObjectURL(url);photoUrls.clear();}
+function openPhoto(url,caption){$('photo-dialog-image').src=url;$('photo-dialog-caption').textContent=caption;$('photo-dialog').showModal();}
+function photoPanel(meal){
+ const panel=el('section','meal-photo-panel');panel.setAttribute('aria-label','餐食照片预览');
+ if(!meal.photo_count){panel.append(el('p','small','这一餐没有登记照片。'));return panel;}
+ const button=el('button','quiet',`查看照片（${meal.photo_count}）`);button.type='button';
+ const status=el('p','small','点击加载私有照片，点击缩略图可放大。');status.setAttribute('role','status');
+ const gallery=el('div','meal-photo-grid');let next=0;const generation=photoGeneration;
+ panel.append(button,status,gallery);
+ async function loadBatch(){
+   if(generation!==photoGeneration || !panel.isConnected)return;
+   status.textContent='正在加载照片…';
+   const data=connection.mode==='demo'?{total:1,photos:[{id:'demo-photo',demo:true,created_at:meal.created_at}]}:await backend(connection,'/rest/v1/rpc/admin_meal_photos',{body:{p_meal:meal.id,p_offset:next,p_limit:12}});
+   if(generation!==photoGeneration || !panel.isConnected)return;
+   for(const photo of data.photos){
+     const tile=el('div','photo-tile');const caption=`${mealNames[meal.meal_type]||'餐食'} · ${date(meal.eaten_at)}${photo.demo?' · 演示插图（非上传照片）':''}`;
+     const zoom=el('button','photo-thumbnail');zoom.type='button';zoom.setAttribute('aria-label',`放大查看${caption}`);
+     const image=el('img');image.alt=caption;image.decoding='async';zoom.append(image);
+     const note=el('p','small',photo.demo?'演示插图':'照片加载中…');tile.append(zoom,note);gallery.append(tile);
+     async function loadImage(){
+       try{
+         const url=photo.demo?demoMealPhoto:await downloadAdminPhoto(connection,photo);
+         if(generation!==photoGeneration || !tile.isConnected){if(!photo.demo)URL.revokeObjectURL(url);return;}
+         if(!photo.demo)photoUrls.add(url);
+         image.src=url;image.hidden=false;zoom.disabled=false;delete zoom.dataset.unavailable;
+         note.textContent=photo.demo?'演示插图 · 点击放大':`上传：${date(photo.created_at)} · 点击放大`;
+         zoom.onclick=()=>openPhoto(url,caption);
+       }catch(error){image.hidden=true;zoom.disabled=true;zoom.dataset.unavailable='true';note.textContent=error.message;const retry=el('button','quiet','重试');retry.type='button';retry.addEventListener('click',()=>action(async()=>{retry.remove();await loadImage();}));tile.append(retry);}
+     }
+     image.onerror=()=>{image.hidden=true;zoom.disabled=true;zoom.dataset.unavailable='true';note.textContent='浏览器无法预览该图片格式，可尝试 JPG / PNG / WebP。';};
+     await loadImage();
+   }
+   next+=data.photos.length;button.hidden=next>=data.total || !data.photos.length;
+   button.textContent=`继续加载照片（${next}/${data.total}）`;
+   status.textContent=data.total?`已读取 ${next} / ${data.total} 张照片记录。`:'没有找到已登记的照片。';
+ }
+ button.addEventListener('click',()=>action(async()=>{try{await loadBatch();}catch(error){status.textContent=error.message;throw error;}}));
+ return panel;
+}
 async function detail(){const data=connection.mode==='demo'?demoDetail(selected):await backend(connection,'/rest/v1/rpc/admin_participant_detail',{body:{p_participant:selected,p_offset:mealOffset,p_limit:pageSize}});
+ releasePhotos();
  const box=$('participant-detail');box.replaceChildren();box.append(el('span','eyebrow','PARTICIPANT TIMELINE'),el('h2','', '用户记录详情'),el('p','detail-id',data.participant.id),el('p','small',`加入时间：${date(data.participant.created_at)} · ${data.participant.account_linked?'账户已关联':'账户已解除关联'}`));
  box.append(jsonBlock(`习惯历史（${data.profiles.length}）`,data.profiles),jsonBlock(`研究同意 / 撤回（${data.consents.length}）`,data.consents));
  box.append(el('h3','', '餐食时间线'));mealTotal=data.meal_total;
  if(!data.meals.length)box.append(el('p','subtle','尚无餐食记录。'));
  for(const meal of data.meals){const article=el('article','timeline-meal');article.append(el('h3','',mealNames[meal.meal_type]||'餐食'),el('p','small',`用餐：${date(meal.eaten_at)} · 原时区 ${meal.timezone}`),el('p','small',`提交：${date(meal.created_at)} · 照片 ${meal.photo_count} 张`));
+ article.append(photoPanel(meal));
  const table=el('table','comparison');const head=el('thead');const h=el('tr');['尝试','P / F / C（g）','T（kcal）'].forEach(t=>{const th=el('th','',t);th.scope='col';h.append(th);});head.append(h);table.append(head);const body=el('tbody');
  meal.guesses.forEach((g,i)=>{const tr=el('tr');tr.append(el('td','',`${i+1}${i===0?' · 首次':''}`),el('td','',`${g.protein_g} / ${g.fat_g} / ${g.carbs_g}`),el('td','',g.calories_kcal));body.append(tr);});table.append(body);article.append(table);
  if(!meal.guesses.length)article.append(el('p','small','尚无猜测记录。'));
@@ -40,7 +84,11 @@ $('admin-filter').addEventListener('submit',e=>{e.preventDefault();action(async(
 $('admin-refresh').addEventListener('click',()=>action(async()=>{await overview();await list();if(selected)await detail();notice('数据已刷新。');}));
 $('participants-prev').addEventListener('click',()=>action(async()=>{offset=Math.max(0,offset-pageSize);await list();}));
 $('participants-next').addEventListener('click',()=>action(async()=>{offset+=pageSize;await list();}));
-$('admin-logout').addEventListener('click',()=>action(async()=>{try{await signOut(connection);}finally{location.href='login.html?portal=admin';}}));
+$('admin-logout').addEventListener('click',()=>action(async()=>{releasePhotos();try{await signOut(connection);}finally{location.href='login.html?portal=admin';}}));
+$('photo-dialog-close').addEventListener('click',closePhoto);
+$('photo-dialog').addEventListener('close',()=>{$('photo-dialog-image').removeAttribute('src');});
+$('photo-dialog').addEventListener('click',event=>{if(event.target===$('photo-dialog'))closePhoto();});
+window.addEventListener('pagehide',releasePhotos);
 await action(async()=>{
  if(!connection || (connection.mode==='demo'&&connection.portal!=='admin')){location.replace('login.html?portal=admin');return;}
  if(connection.mode==='live'&&await backend(connection,'/rest/v1/rpc/is_admin',{body:{}})!==true){blocked('当前账户没有管理员权限，请联系项目负责人。');return;}
