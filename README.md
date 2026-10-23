@@ -1,5 +1,7 @@
 # PFCT 后端
 
+HTTPS 测试入口：[PFCT 网站](https://pfct-nutrition-test.tasty-guppy-6736.chatgpt.site/login.html)。网站已发布，邮箱确认回调配置仍需项目 Owner 完成，详见 [部署状态与更新方式](docs/https-deployment.md)。
+
 面向营养认知学习 App 的 Supabase / PostgreSQL 初始骨架。当前实现账户关联、用户习惯历史、餐食、私有照片、PFCT 猜测，以及供后端写入的营养参考结果与反馈。
 
 **当前状态：数据库迁移已应用到 Supabase 开发项目，已联调用户登录、餐食和猜测保存、管理员记录查看及真实照片预览。** 已配置 GitHub Actions，实际验证结果请查看对应提交的 Actions 运行记录。FatSecret 真实查询仍需完成出口 IP 白名单和部署后验证。照片识别、Perfect 规则、研究导出和账户退出/数据清理流程尚未实现。没有生成模拟营养数据库答案。

@@ -1,4 +1,5 @@
 import {validatePublicConfig,readConnection,writeConnection,clearConnection,sessionData,backend} from './auth.mjs';
+import {publicConfig} from './public-config.mjs';
 const $=id=>document.getElementById(id); let portal='user'; let busy=false;
 function message(text,error=false){$('login-notice').textContent=text;$('login-notice').className=`notice ${error?'error':''}`;}
 function role(value){
@@ -30,10 +31,15 @@ $('login-form').addEventListener('submit',e=>{e.preventDefault();action(async()=
 });});
 $('login-signup').addEventListener('click',()=>{
   if(portal!=='user'||!$('login-form').reportValidity())return;
-  action(async()=>{const c=config();clearConnection();const data=await backend(c,'/auth/v1/signup',{authenticated:false,body:{email:$('login-email').value.trim(),password:$('login-password').value}});
+  action(async()=>{const c=config();clearConnection();const redirect=new URL('login.html',location.href).href;const data=await backend(c,'/auth/v1/signup?redirect_to='+encodeURIComponent(redirect),{authenticated:false,body:{email:$('login-email').value.trim(),password:$('login-password').value}});
     $('login-password').value='';if(data?.access_token)await finish(c,data);else message('注册请求已提交。请检查邮箱并验证，然后返回登录。');});
 });
 $('demo-entry').addEventListener('click',()=>{clearConnection();writeConnection({mode:'demo',portal});location.href=portal==='admin'?'admin.html?demo=admin':'index.html?demo=user';});
-const previous=readConnection();if(previous?.mode==='live'){ $('login-url').value=previous.url;$('login-key').value=previous.key;}
+$('login-url').value=publicConfig.url;$('login-key').value=publicConfig.key;
+$('connection-details').hidden=!['localhost','127.0.0.1'].includes(location.hostname);
+message('使用邮箱注册或登录，开始记录你的每一餐。');
+const previous=readConnection();if(previous?.mode==='live' && !$('connection-details').hidden){ $('login-url').value=previous.url;$('login-key').value=previous.key;}
+const callback=new URLSearchParams(location.hash.slice(1));
+if(location.hash){history.replaceState(null,'',location.pathname+location.search);if(callback.has('error'))message('邮箱验证链接无效或已过期，请返回邮箱检查最新邮件。',true);else if(callback.has('access_token'))message('邮箱验证已完成，请输入邮箱和密码登录。');}
 if(new URLSearchParams(location.search).get('portal')==='admin')role('admin');
 if(new URLSearchParams(location.search).has('expired'))message('登录会话已失效，请重新登录。',true);

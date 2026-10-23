@@ -1,0 +1,1 @@
+export const publicConfig = {"url": "https://agxpvgjsyhhizvamyvuk.supabase.co", "key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFneHB2Z2pzeWhoaXp2YW15dnVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMTk5MzcsImV4cCI6MjEwNzY5NTkzN30.0onLuphwfh2vfrELaGOvqJzsxljPEMCIqu3Dk_FWeNA"};

@@ -16,7 +16,7 @@ python3 -m http.server 8080 --bind 127.0.0.1 --directory web
 
 - 用户演示：在登录页选择“体验用户演示”，选择照片、输入猜测、按包装标签计算对比。图片不上传，餐食记录仅在当前页内存，刷新即清空。不生成模拟营养答案或 Perfect。
 - 管理员演示：在登录页切换管理员入口，点击体验；仅展示合成的用户与餐食样本。
-- Supabase 联调：在登录页展开“开发环境连接”，填写项目根地址与 publishable / legacy anon key，再注册或登录。会话与公开配置保存在当前标签页的 sessionStorage，退出清除；密码不保存。禁止填写 secret / service_role key。需要事先应用仓库迁移；页面不会执行迁移。管理员还需要数据库所有者授权，见 `docs/admin-workspace.md`。
+- Supabase 联调：默认读取 `public-config.mjs` 的公开配置，可直接注册或登录；本地可展开“开发环境连接”覆盖配置。会话与公开配置保存在当前标签页的 sessionStorage，退出清除；密码不保存。禁止填写 secret / service_role key。需要事先应用仓库迁移；页面不会执行迁移。管理员还需要数据库所有者授权，见 `docs/admin-workspace.md`。公共网站状态与邮箱确认回调配置见 `docs/https-deployment.md`。
 
 真实模式按顺序创建餐食、上传私有图片、登记照片、保存猜测；失败后保留此次操作 ID 与阶段，在原页面重试可以避免重复记录。刷新页面会失去尚未完成的重试状态；当前没有后台恢复或自动清理孤立记录的功能。
 

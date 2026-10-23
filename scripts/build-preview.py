@@ -13,6 +13,8 @@ for page, script in [('index','app'),('login','login'),('admin','admin')]:
     html = (web / (page + '.html')).read_text()
     js = '\n'.join(line for line in (web / (script + '.js')).read_text().splitlines() if not line.startswith('import '))
     modules = (core + '\n' if page == 'index' else '') + auth
+    if page == 'login':
+        modules += '\n' + (web / 'public-config.mjs').read_text()
     if page == 'admin':
         modules += '\n' + '\n'.join(line for line in (web / 'admin-photos.mjs').read_text().splitlines() if not line.startswith('import '))
     inline = '\n'.join(line.removeprefix('export ') for line in modules.splitlines()) + '\n' + js
